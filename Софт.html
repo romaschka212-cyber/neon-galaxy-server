@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Galaxy Chaos</title>
+    <style>
+        * { box-sizing: border-box; touch-action: none; }
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #03050a;
+            font-family: 'Courier New', monospace; user-select: none; color: #fff;
+        }
+        
+        canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+
+        /* --- СТИЛИ МЕНЮ --- */
+        .menu-screen {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle, #0b1120 0%, #03050a 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 200; transition: opacity 0.3s;
+        }
+        .hidden { display: none !important; }
+        
+        .title { color: #00ffcc; font-size: 36px; font-weight: bold; text-shadow: 0 0 20px #00ffcc; margin-bottom: 20px; text-align: center;}
+        .subtitle { color: #ff0055; font-size: 20px; margin-bottom: 30px; }
+        
+        .btn {
+            background: transparent; color: #00ffcc; border: 2px solid #00ffcc; font-size: 20px;
+            padding: 15px 40px; font-family: inherit; font-weight: bold; border-radius: 8px;
+            box-shadow: 0 0 10px #00ffcc; cursor: pointer; margin-bottom: 15px; width: 280px; text-align: center;
+        }
+        .btn:active { background: #00ffcc; color: #000; }
+        .btn-red { border-color: #ff0055; color: #ff0055; box-shadow: 0 0 10px #ff0055; }
+        .btn-red:active { background: #ff0055; color: #fff; }
+
+        input[type="text"] {
+            background: #111; border: 2px solid #00ffcc; color: #fff; font-size: 20px;
+            padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 20px;
+            font-family: inherit; outline: none; width: 280px;
+        }
+
+        #leaderboard {
+            margin-top: 30px; border: 1px solid #333; border-radius: 8px; padding: 15px;
+            width: 300px; background: rgba(0,0,0,0.5);
+        }
+        #leaderboard h3 { margin: 0 0 10px 0; color: #ffcc00; text-align: center; }
+        .lb-entry { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+
+        .player-slot { background: #1a1a24; border: 1px solid #555; padding: 15px; width: 280px; text-align: center; margin-bottom: 10px; border-radius: 5px; }
+        .room-code { font-size: 32px; color: #ffff00; letter-spacing: 5px; margin: 20px 0; }
+
+        /* --- СТИЛИ ИГРЫ --- */
+        #ui-layer { position: absolute; top: 15px; left: 15px; z-index: 10; font-size: 18px; font-weight: bold; color: #00ffcc; display: none; pointer-events: none; }
+        #hp-bar { color: #ff3366; display: block; margin-bottom: 5px; }
+        #buff-bar { color: #ffff00; font-size: 14px; display: block; }
+
+        #controls { display: none; }
+        #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(0, 255, 204, 0.3); border-radius: 50%; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        #joystick-knob { width: 50px; height: 50px; background: #00ffcc; border-radius: 50%; box-shadow: 0 0 15px #00ffcc; }
+        
+        #fire-btn { position: absolute; bottom: 30px; right: 30px; width: 80px; height: 80px; background: rgba(255, 51, 102, 0.2); border: 2px solid #ff3366; border-radius: 50%; color: #ff3366; font-weight: bold; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        #dash-btn { position: absolute; bottom: 130px; right: 30px; width: 60px; height: 60px; background: rgba(0, 153, 255, 0.2); border: 2px solid #0099ff; border-radius: 50%; color: #0099ff; font-weight: bold; font-size: 12px; z-index: 100; display: flex; align-items: center; justify-content: center; }
+
+        #cheat-trigger { display: none; position: fixed; top: 20px; right: 20px; width: 50px; height: 50px; background: #ff0055; border: 2px solid #fff; border-radius: 50%; z-index: 1000; box-shadow: 0 0 15px #ff0055; align-items: center; justify-content: center; color: #fff; font-size: 24px; cursor: pointer; }
+        #cheat-menu { display: none; position: fixed; top: 80px; right: 20px; background: rgba(10, 5, 15, 0.95); border: 2px solid #ff0055; box-shadow: 0 0 30px #ff0055; padding: 20px; border-radius: 10px; z-index: 999; width: 290px; max-height: 65vh; overflow-y: auto; touch-action: pan-y !important; }
+        .cheat-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; color: #fff; font-size: 13px; }
+        .cheat-item input { transform: scale(1.4); cursor: pointer; }
+        .cheat-btn { width: 100%; background: #9900ff; color: white; border: none; padding: 12px; font-weight: bold; margin-bottom: 10px; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="nick-screen" class="menu-screen hidden">
+        <div class="title">ДОБРО ПОЖАЛОВАТЬ</div>
+        <p>Введите ваш позывной пилота:</p>
+        <input type="text" id="nick-input" placeholder="Player123" maxlength="12">
+        <button class="btn" onclick="saveNickname()">ПРОДОЛЖИТЬ</button>
+    </div>
+
+    <div id="main-menu" class="menu-screen hidden">
+        <div class="title">NEON GALAXY<br>CHAOS EDITION</div>
+        <div class="subtitle" id="player-greeting">Привет, Игрок!</div>
+        
+        <button class="btn" onclick="startGame('solo')">ОДИНОЧНАЯ ИГРА</button>
+        <button class="btn btn-red" onclick="showScreen('mp-mode-screen')">МУЛЬТИПЛЕЕР</button>
+
+        <div id="leaderboard">
+            <h3>ТОП ПИЛОТОВ (Топ-3)</h3>
+            <div class="lb-entry"><span>1. ProKilla</span><span>9500</span></div>
+            <div class="lb-entry"><span>2. StarLord</span><span>8200</span></div>
+            <div class="lb-entry"><span>3. <span id="lb-my-nick">Ты</span></span><span>0</span></div>
+        </div>
+    </div>
+
+    <div id="mp-mode-screen" class="menu-screen hidden">
+        <div class="title">МУЛЬТИПЛЕЕР</div>
+        <button class="btn" onclick="openLobby('1v1')">1 VS 1 (ДУЭЛЬ)</button>
+        <button class="btn" onclick="openLobby('coop')">CO-OP VS БОТЫ</button>
+        <button class="btn btn-red" style="margin-top: 30px;" onclick="showScreen('main-menu')">НАЗАД</button>
+    </div>
+
+    <div id="lobby-action-screen" class="menu-screen hidden">
+        <div class="title" id="lobby-mode-title">РЕЖИМ</div>
+        <button class="btn" onclick="createRoom()">СОЗДАТЬ КОМНАТУ</button>
+        <p style="margin: 20px 0;">ИЛИ</p>
+        <input type="text" id="room-code-input" placeholder="Код комнаты (5 цифр)" maxlength="5">
+        <button class="btn btn-red" onclick="joinRoom()">ВСТУПИТЬ</button>
+        <button class="btn" style="margin-top: 30px; border-color: #555; color: #555; box-shadow: none;" onclick="showScreen('mp-mode-screen')">НАЗАД</button>
+    </div>
+
+    <div id="room-screen" class="menu-screen hidden">
+        <div class="title">КОМНАТА ОЖИДАНИЯ</div>
+        <div style="color: #aaa;">Код комнаты:</div>
+        <div class="room-code" id="display-room-code">00000</div>
+        
+        <div class="player-slot" id="slot-1" style="color: #00ffcc;">[Твой Ник] (Хост)</div>
+        <div class="player-slot" id="slot-2" style="color: #ff3366;">Ожидание игрока...</div>
+
+        <button class="btn btn-red hidden" id="btn-start-mp" onclick="startMpGame()">НАЧАТЬ ИГРУ</button>
+        <button class="btn" style="margin-top: 20px; border-color: #555; color: #555; box-shadow: none;" onclick="showScreen('main-menu')">ПОКИНУТЬ</button>
+    </div>
+
+    <div id="ui-layer">
+        <span id="hp-bar">HP: 100%</span>
+        <span id="score-bar">СЧЕТ: 0</span>
+        <span id="buff-bar"></span>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="controls">
+        <div id="joystick-zone"><div id="joystick-knob"></div></div>
+        <div id="dash-btn">DASH</div>
+        <div id="fire-btn">FIRE</div>
+    </div>
+
+    <div id="cheat-trigger" onclick="toggleCheatMenu()">⚙</div>
+    <div id="cheat-menu">
+        <h3 style="color:#00ffcc; text-align:center; margin-top:0; font-size:16px;">ЧИТ МЕНЮ</h3>
+        <div class="cheat-item"><label>1. GOD MODE</label><input type="checkbox" id="cGod"></div>
+        <div class="cheat-item"><label>2. ESP</label><input type="checkbox" id="cEsp"></div>
+        <div class="cheat-item"><label>3. KILL AURA</label><input type="checkbox" id="cAura"></div>
+        <div class="cheat-item"><label>4. GIANT BULLETS</label><input type="checkbox" id="cGiant"></div>
+        <div class="cheat-item"><label>5. RAPID FIRE</label><input type="checkbox" id="cRapid"></div>
+        <div class="cheat-item"><label>6. SPEED HACK</label><input type="checkbox" id="cSpeed"></div>
+        <div class="cheat-item"><label>7. GHOST WALK</label><input type="checkbox" id="cGhost"></div>
+        <div class="cheat-item"><label>8. AUTO-LOOT</label><input type="checkbox" id="cMagnet"></div>
+        <div class="cheat-item"><label>9. FREEZE ENEMIES</label><input type="checkbox" id="cFreeze"></div>
+        <div class="cheat-item"><label>10. RAINBOW GUN</label><input type="checkbox" id="cRainbow"></div>
+        <div class="cheat-item"><label>11. MULTI-SHOT</label><input type="checkbox" id="cMulti"></div>
+        <div class="cheat-item"><label>13. AUTO-AIM</label><input type="checkbox" id="cAim"></div>
+        <hr style="border-color:#ff0055; margin: 15px 0;">
+        <button class="cheat-btn" onclick="triggerNuke()">12. ВЗОРВАТЬ ВСЕХ (NUKE)</button>
+    </div>
+
+    <script>
+        // --- ЛОГИКА МЕНЮ ---
+        let playerName = localStorage.getItem('neonPlayerName');
+        let currentMpMode = '';
+        let isHost = false;
+
+        function initMenu() {
+            if (!playerName) {
+                showScreen('nick-screen');
+            } else {
+                document.getElementById('player-greeting').innerText = `Пилот: ${playerName}`;
+                document.getElementById('lb-my-nick').innerText = playerName;
+                showScreen('main-menu');
+            }
+        }
+
+        function saveNickname() {
+            const input = document.getElementById('nick-input').value.trim();
+            if (input.length > 2) {
+                playerName = input;
+                localStorage.setItem('neonPlayerName', playerName);
+                initMenu();
+            } else {
+                alert('Ник должен содержать минимум 3 символа!');
+            }
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.menu-screen').forEach(el => el.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function openLobby(mode) {
+            currentMpMode = mode;
+            document.getElementById('lobby-mode-title').innerText = mode === '1v1' ? '1 VS 1' : 'КООПЕРАТИВ';
+            showScreen('lobby-action-screen');
+        }
+
+        function createRoom() {
+            isHost = true;
+            const code = Math.floor(10000 + Math.random() * 90000); 
+            document.getElementById('display-room-code').innerText = code;
+            document.getElementById('slot-1').innerText = `${playerName} (Хост)`;
+            document.getElementById('slot-2').innerText = `Ожидание игрока...`;
+            document.getElementById('slot-2').style.color = "#ff3366";
+            document.getElementById('btn-start-mp').classList.remove('hidden');
+            
+            showScreen('room-screen');
+            
+            // Имитация захода друга
+            setTimeout(() => {
+                if (isHost && document.getElementById('room-screen').classList.contains('hidden') === false) {
+                    document.getElementById('slot-2').innerText = `FriendBot_77 (Подключен)`;
+                    document.getElementById('slot-2').style.color = "#00ffcc";
+                }
+            }, 3000);
+        }
+
+        function joinRoom() {
+            const code = document.getElementById('room-code-input').value;
+            if (code.length === 5) {
+                isHost = false;
+                document.getElementById('display-room-code').innerText = code;
+                document.getElementById('slot-1').innerText = `HostPlayer (Хост)`;
+                document.getElementById('slot-2').innerText = `${playerName} (Ты)`;
+                document.getElementById('slot-2').style.color = "#00ffcc";
+                document.getElementById('btn-start-mp').classList.add('hidden');
+                
+                showScreen('room-screen');
+            } else {
+                alert('Введите 5-значный код!');
+            }
+        }
+
+        // --- ИГРОВАЯ ЛОГИКА ---
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let w, h, gameState = 'menu', shake = 0;
+        function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+
+        const WORLD_SIZE = 2500;
+        
+        let player = {
+            x: WORLD_SIZE / 2, y: WORLD_SIZE / 2,
+            radius: 18, hp: 100, score: 0,
+            baseSpeed: 5, angle: 0,
+            dashCd: 0, isDashing: false
+        };
+
+        let bullets = [], enemyBullets = [], enemies = [], particles = [], powerUps = [];
+        let joyVec = { x: 0, y: 0 };
+        let isFiring = false, lastShot = 0;
+
+        const cMenu = document.getElementById("cheat-menu");
+        cMenu.addEventListener("touchmove", (e) => { e.stopPropagation(); }, { passive: true });
+
+        function toggleCheatMenu() { cMenu.style.display = cMenu.style.display === 'block' ? 'none' : 'block'; }
+
+        function startGame(mode) {
+            document.querySelectorAll('.menu-screen').forEach(el => el.classList.add('hidden'));
+            document.getElementById("ui-layer").style.display = 'block';
+            document.getElementById("controls").style.display = 'block';
+            document.getElementById("cheat-trigger").style.display = 'flex';
+            
+            // Сброс состояния на случай перезапуска
+            player.hp = 100;
+            player.score = 0;
+            player.x = WORLD_SIZE / 2;
+            player.y = WORLD_SIZE / 2;
+            bullets = []; enemyBullets = []; enemies = []; particles = []; powerUps = [];
+            
+            gameState = 'playing';
+        }
+
+        function startMpGame() {
+            startGame(currentMpMode);
+        }
+
+        const jZone = document.getElementById("joystick-zone");
+        const jKnob = document.getElementById("joystick-knob");
+        
+        jZone.addEventListener("touchstart", handleJoy);
+        jZone.addEventListener("touchmove", handleJoy);
+        jZone.addEventListener("touchend", () => { joyVec = {x:0, y:0}; jKnob.style.transform = `translate(0,0)`; });
+
+        function handleJoy(e) {
+            e.preventDefault();
+            const rect = jZone.getBoundingClientRect();
+            let dx = e.touches[0].clientX - (rect.left + rect.width/2);
+            let dy = e.touches[0].clientY - (rect.top + rect.height/2);
+            const dist = Math.hypot(dx, dy);
+            const maxR = rect.width/2 - 20;
+            if (dist > maxR) { dx = (dx/dist)*maxR; dy = (dy/dist)*maxR; }
+            jKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+            joyVec.x = dx / maxR; joyVec.y = dy / maxR;
+        }
+
+        document.getElementById("fire-btn").addEventListener("touchstart", e => { e.preventDefault(); isFiring = true; });
+        document.getElementById("fire-btn").addEventListener("touchend", e => { e.preventDefault(); isFiring = false; });
+
+        document.getElementById("dash-btn").addEventListener("touchstart", e => {
+            e.preventDefault();
+            if (player.dashCd <= 0) {
+                player.isDashing = true;
+                player.dashCd = 60;
+                shake = 15;
+                
+                for(let i=0; i<Math.PI*2; i+=Math.PI/6) {
+                    particles.push({ 
+                        x: player.x, y: player.y, 
+                        vx: Math.cos(i)*12, vy: Math.sin(i)*12, 
+                        life: 1.2, color: '#0099ff', size: 6, isWave: true 
+                    });
+                }
+                setTimeout(() => player.isDashing = false, 200);
+            }
+        });
+
+        function triggerNuke() {
+            shake = 40;
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                for(let p=0; p<10; p++) particles.push({ x: e.x, y: e.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1, color: '#ff5500', size: 6 });
+                player.score += 10;
+            }
+            enemies = [];
+            cMenu.style.display = 'none';
+        }
+
+        function spawnEnemy() {
+            if (gameState !== 'playing' || enemies.length >= 35) return;
+            const isShooter = Math.random() > 0.5;
+            let ex = player.x + (Math.random() > 0.5 ? 1 : -1) * (w/2 + 200);
+            let ey = player.y + (Math.random() > 0.5 ? 1 : -1) * (h/2 + 200);
+            enemies.push({
+                x: Math.max(50, Math.min(WORLD_SIZE-50, ex)),
+                y: Math.max(50, Math.min(WORLD_SIZE-50, ey)),
+                radius: 16, 
+                hp: 40 + (player.score * 0.2), 
+                maxHp: 40 + (player.score * 0.2),
+                type: isShooter ? 'shooter' : 'hunter',
+                lastShot: 0,
+                angle: 0
+            });
+        }
+        setInterval(spawnEnemy, 1200);
+
+        function update() {
+            if (gameState !== 'playing') return;
+
+            const chkGod = document.getElementById("cGod").checked;
+            const chkEsp = document.getElementById("cEsp").checked;
+            const chkAura = document.getElementById("cAura").checked;
+            const chkGiant = document.getElementById("cGiant").checked;
+            const chkRapid = document.getElementById("cRapid").checked;
+            const chkSpeed = document.getElementById("cSpeed").checked;
+            const chkGhost = document.getElementById("cGhost").checked;
+            const chkMagnet = document.getElementById("cMagnet").checked;
+            const chkFreeze = document.getElementById("cFreeze").checked;
+            const chkRainbow = document.getElementById("cRainbow").checked;
+            const chkMulti = document.getElementById("cMulti").checked;
+            const chkAim = document.getElementById("cAim").checked; 
+
+            if (chkGod) player.hp = 100;
+            if (player.dashCd > 0) player.dashCd--;
+
+            let berserkMult = chkGod ? 1 : 1 + (100 - player.hp) * 0.02;
+            let currentSpeed = player.baseSpeed * (chkSpeed ? 3.5 : 1) * (player.isDashing ? 3 : 1);
+            
+            player.x = Math.max(player.radius, Math.min(WORLD_SIZE - player.radius, player.x + joyVec.x * currentSpeed));
+            player.y = Math.max(player.radius, Math.min(WORLD_SIZE - player.radius, player.y + joyVec.y * currentSpeed));
+
+            if (chkAim && enemies.length > 0) {
+                let target = enemies[0];
+                let minDist = Infinity;
+                for (let i = 0; i < enemies.length; i++) {
+                    let d = Math.hypot(player.x - enemies[i].x, player.y - enemies[i].y);
+                    if (d < minDist) { minDist = d; target = enemies[i]; }
+                }
+                player.angle = Math.atan2(target.y - player.y, target.x - player.x);
+            } else if (joyVec.x !== 0 || joyVec.y !== 0) {
+                player.angle = Math.atan2(joyVec.y, joyVec.x);
+                if (chkSpeed && Math.random() < 0.4) {
+                    particles.push({ x: player.x, y: player.y, vx: -joyVec.x * 3, vy: -joyVec.y * 3, life: 0.8, color: '#ff3300', size: 8, isPlasma: true });
+                }
+            }
+
+            let enemySpeedModifier = player.isDashing ? 0.2 : 1;
+
+            if (isFiring) {
+                let now = Date.now();
+                let cd = chkRapid ? 40 : 160; 
+                if (now - lastShot > cd) {
+                    shake = chkGiant ? 8 : 2; 
+                    let bSize = chkGiant ? 22 : 5;
+                    let bDamage = (chkGiant ? 150 : 35) * berserkMult;
+                    let bColor = chkRainbow ? `hsl(${Math.random()*360}, 100%, 60%)` : '#00ffcc';
+
+                    if (chkMulti) {
+                        for (let i = -2; i <= 2; i++) {
+                            let ang = player.angle + (i * 0.2);
+                            bullets.push({ x: player.x, y: player.y, vx: Math.cos(ang)*15, vy: Math.sin(ang)*15, life: 80, size: bSize, damage: bDamage, color: bColor, pierce: chkRainbow, chain: true });
+                        }
+                    } else {
+                        bullets.push({ x: player.x, y: player.y, vx: Math.cos(player.angle)*15, vy: Math.sin(player.angle)*15, life: 80, size: bSize, damage: bDamage, color: bColor, pierce: chkRainbow, chain: true });
+                    }
+                    lastShot = now;
+                }
+            }
+
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                let pu = powerUps[i];
+                if (chkMagnet) {
+                    let dx = player.x - pu.x, dy = player.y - pu.y, d = Math.hypot(dx, dy);
+                    if (d < 500) { pu.x += (dx/d)*8; pu.y += (dy/d)*8; }
+                }
+                if (Math.hypot(player.x - pu.x, player.y - pu.y) < player.radius + pu.radius) {
+                    player.score += 50;
+                    player.hp = Math.min(100, player.hp + 15);
+                    powerUps.splice(i, 1);
+                }
+            }
+
+            if (Math.random() < 0.01 && powerUps.length < 5) powerUps.push({ x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, radius: 10 });
+
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.vx; b.y += b.vy; b.life--;
+                if (b.life <= 0) bullets.splice(i, 1);
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                let dist = Math.hypot(player.x - e.x, player.y - e.y);
+                let ang = Math.atan2(player.y - e.y, player.x - e.x);
+
+                if (chkAura && dist < 160) e.hp -= 4;
+                if (chkGhost && dist < 300 && !chkFreeze) { e.x += Math.cos(ang) * 2; e.y += Math.sin(ang) * 2; }
+
+                if (!chkFreeze) {
+                    e.angle = ang;
+                    let sp = (e.type === 'hunter' ? 1.8 : 1.0) * enemySpeedModifier;
+                    e.x += Math.cos(e.angle) * sp; e.y += Math.sin(e.angle) * sp;
+                }
+
+                if (e.type === 'shooter' && dist < 500 && !chkFreeze) {
+                    let now = Date.now();
+                    if (now - e.lastShot > 1800) {
+                        enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(ang)*7, vy: Math.sin(ang)*7 });
+                        e.lastShot = now;
+                    }
+                }
+
+                if (dist < player.radius + e.radius) {
+                    if (chkGhost) e.hp -= 2; 
+                    else if (!player.isDashing && !chkGod) player.hp -= 0.5; 
+                }
+
+                for (let bIdx = bullets.length - 1; bIdx >= 0; bIdx--) {
+                    let b = bullets[bIdx];
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < e.radius + b.size) {
+                        e.hp -= b.damage;
+                        if (b.chain) {
+                            for (let nextE of enemies) {
+                                if (nextE !== e && Math.hypot(e.x - nextE.x, e.y - nextE.y) < 200) nextE.hp -= b.damage * 0.5;
+                            }
+                        }
+                        if (!b.pierce) bullets.splice(bIdx, 1);
+                        break; 
+                    }
+                }
+
+                if (e.hp <= 0) {
+                    player.hp = Math.min(100, player.hp + 4);
+                    for(let p=0; p<8; p++) particles.push({ x: e.x, y: e.y, vx: (Math.random()-0.5)*8, vy: (Math.random()-0.5)*8, life: 1, color: '#ff3366', size: 4 });
+                    enemies.splice(i, 1);
+                    player.score += 10;
+                }
+            }
+
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                let eb = enemyBullets[i];
+                eb.x += eb.vx; eb.y += eb.vy;
+                let distToPlayer = Math.hypot(player.x - eb.x, player.y - eb.y);
+                
+                if (chkGod && distToPlayer < player.radius + 40) {
+                    eb.vx *= -1.5; eb.vy *= -1.5;
+                    bullets.push({ x: eb.x, y: eb.y, vx: eb.vx, vy: eb.vy, life: 100, size: 6, damage: 40, color: '#ffff00', pierce: false });
+                    enemyBullets.splice(i, 1);
+                    continue;
+                }
+
+                if (distToPlayer < player.radius + 5 && !player.isDashing && !chkGod) {
+                    player.hp -= 12;
+                    enemyBullets.splice(i, 1);
+                    continue;
+                }
+                if (eb.x < 0 || eb.x > WORLD_SIZE || eb.y < 0 || eb.y > WORLD_SIZE) enemyBullets.splice(i, 1);
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.03; 
+                
+                if (p.isPlasma || p.isWave) {
+                    for (let e of enemies) {
+                        let d = Math.hypot(p.x - e.x, p.y - e.y);
+                        if (d < e.radius + p.size + (p.isWave ? 20 : 0)) {
+                            e.hp -= p.isWave ? 2 : 1; 
+                            if(p.isWave) { e.x += p.vx*0.5; e.y += p.vy*0.5; }
+                        }
+                    }
+                }
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+
+            if (player.hp <= 0) {
+                alert("КОРАБЛЬ УНИЧТОЖЕН! Счет: " + player.score);
+                document.getElementById("cheat-trigger").style.display = 'none';
+                cMenu.style.display = 'none';
+                showScreen('main-menu'); // Возврат в меню вместо перезагрузки страницы
+            } else {
+                document.getElementById("hp-bar").innerText = `HP: ${Math.ceil(player.hp)}%`;
+                document.getElementById("score-bar").innerText = `СЧЕТ: ${player.score}`;
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, w, h);
+
+            let camX = Math.max(0, Math.min(WORLD_SIZE - w, player.x - w / 2));
+            let camY = Math.max(0, Math.min(WORLD_SIZE - h, player.y - h / 2));
+
+            ctx.save();
+            ctx.translate(-camX + (Math.random() - 0.5) * shake, -camY + (Math.random() - 0.5) * shake);
+            shake *= 0.9; 
+
+            ctx.strokeStyle = "#112233"; ctx.lineWidth = 1;
+            for (let x = 0; x <= WORLD_SIZE; x += 100) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_SIZE); ctx.stroke(); }
+            for (let y = 0; y <= WORLD_SIZE; y += 100) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_SIZE, y); ctx.stroke(); }
+            ctx.strokeStyle = "#00ffcc"; ctx.lineWidth = 4; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+
+            const chkEsp = document.getElementById("cEsp").checked;
+            const chkFreeze = document.getElementById("cFreeze").checked;
+
+            if (chkEsp && gameState === 'playing') {
+                enemies.forEach(e => {
+                    ctx.save();
+                    ctx.strokeStyle = "rgba(0, 255, 204, 0.35)"; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+                    ctx.strokeStyle = e.type === 'shooter' ? "#cc00ff" : "#ff3333"; ctx.lineWidth = 2;
+                    ctx.strokeRect(e.x - 22, e.y - 22, 44, 44);
+                    ctx.fillStyle = "#ffffff"; ctx.font = "12px monospace";
+                    ctx.fillText(`HP:${Math.ceil(e.hp)}`, e.x - 20, e.y - 28);
+                    ctx.restore();
+                });
+            }
+
+            powerUps.forEach(pu => {
+                ctx.fillStyle = "#ffff00"; ctx.shadowBlur = 10; ctx.shadowColor = "#ffff00";
+                ctx.beginPath(); ctx.arc(pu.x, pu.y, pu.radius, 0, Math.PI*2); ctx.fill();
+            });
+
+            particles.forEach(p => { 
+                ctx.fillStyle = p.color; ctx.globalAlpha = p.life; 
+                ctx.shadowBlur = p.isWave ? 15 : 0; ctx.shadowColor = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); 
+            });
+            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+
+            if (gameState !== 'playing') { ctx.restore(); return; }
+
+            enemies.forEach(e => {
+                ctx.save(); ctx.translate(e.x, e.y); ctx.shadowBlur = 10;
+                
+                let eColor = chkFreeze ? "#00ffff" : (e.type === 'shooter' ? "#cc00ff" : "#ff3333");
+                ctx.strokeStyle = eColor; 
+                ctx.shadowColor = eColor; 
+                ctx.lineWidth = 2;
+
+                if (e.type === 'shooter') {
+                    ctx.beginPath();
+                    for (let s=0; s<6; s++) { let a = (s * Math.PI) / 3; ctx.lineTo(16 * Math.cos(a), 16 * Math.sin(a)); }
+                    ctx.closePath(); ctx.stroke();
+                } else {
+                    ctx.rotate(e.angle || 0); 
+                    ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(-12, 12); ctx.lineTo(-6, 0); ctx.lineTo(-12, -12); ctx.closePath(); ctx.stroke();
+                }
+                ctx.restore();
+            });
+
+            ctx.fillStyle = "#ffaa00";
+            enemyBullets.forEach(eb => { ctx.beginPath(); ctx.arc(eb.x, eb.y, 5, 0, Math.PI*2); ctx.fill(); });
+
+            bullets.forEach(b => {
+                ctx.fillStyle = b.color; ctx.shadowBlur = b.size; ctx.shadowColor = b.color;
+                ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.shadowBlur = 0;
+
+            ctx.save();
+            ctx.translate(player.x, player.y); ctx.rotate(player.angle);
+            ctx.globalAlpha = player.isDashing ? 0.4 : 1;
+            ctx.strokeStyle = "#00ffcc"; ctx.shadowColor = "#00ffcc"; ctx.shadowBlur = 15; ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(25, 0); ctx.lineTo(-15, 15); ctx.lineTo(-8, 6); ctx.lineTo(-14, 0); ctx.lineTo(-8, -6); ctx.lineTo(-15, -15);
+            ctx.closePath(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(2, 0, 4, 0, Math.PI*2); ctx.fillStyle = "#fff"; ctx.fill();
+            ctx.restore();
+
+            if (document.getElementById("cMulti").checked) {
+                let numDrones = 5, radius = 60, time = Date.now() * 0.004;
+                for (let i = 0; i < numDrones; i++) {
+                    let angle = time + (i * Math.PI * 2 / numDrones);
+                    let dx = player.x + Math.cos(angle) * radius, dy = player.y + Math.sin(angle) * radius;
+
+                    ctx.save(); ctx.translate(dx, dy);
+                    ctx.strokeStyle = "#ffff00"; ctx.lineWidth = 2; ctx.shadowBlur = 8; ctx.shadowColor = "#ffff00";
+                    ctx.strokeRect(-6, -6, 12, 12); ctx.restore();
+
+                    enemies.forEach(e => { if (Math.hypot(dx - e.x, dy - e.y) < e.radius + 10) e.hp -= 3; });
+                }
+            }
+            ctx.restore();
+        }
+
+        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+        
+        // Запуск
+        initMenu();
+        gameLoop();
+    </script>
+</body>
+</html>
